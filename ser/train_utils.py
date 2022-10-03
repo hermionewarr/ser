@@ -40,6 +40,7 @@ def _val_batch(model_params, epoch, val_accuracy, val_losses):
     if val_acc > val_best:
         val_best = val_acc
         best_epoch = epoch
+        best_model_state = torch.deepcopy(model_params.model.state_dict())
     print(
         f"Val Epoch: {epoch} | Avg Loss: {val_loss:.4f} | Accuracy: {val_acc}"
     )
@@ -57,7 +58,7 @@ def vis_update(batch, epoch, loss, vis, loss_plot):
 
 def save_outputs(params, model, acc_dict):
     ### SAVING THE RESULTS ###
-    torch.save(model.state_dict(), params.SAVE_DIR / 'model_dict')
+    torch.save(model.state_dict(), params.SAVE_DIR / 'model_dict.pt')
     torch.save(model, params.SAVE_DIR / 'model.pt')
     
     with open(params.SAVE_DIR / 'parameters.json', 'w') as file:

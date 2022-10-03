@@ -6,8 +6,9 @@ import json
 from ser.data import dataloaders, test_dataloader
 from ser.CNN_model import Net
 from ser.constants import DATA_DIR
+from ser.display import generate_ascii_art, display_num
 
-def inference(MODEL_DIR):
+def inference(MODEL_DIR, transforms):
 	"Function to load and run a pretrained ML Model."
 	print("Starting inference.")
 	label = 6
@@ -23,7 +24,7 @@ def inference(MODEL_DIR):
 
  	# select image to run inference for
 	print('\nLoading data...')
-	dataloader = test_dataloader(DATA_DIR, 1)
+	dataloader = test_dataloader(DATA_DIR, 1, transforms)
 	images, labels = next(iter(dataloader))
 	while labels[0].item() != label:
 		images, labels = next(iter(dataloader))
@@ -39,25 +40,6 @@ def inference(MODEL_DIR):
 	pixels = images[0][0]
 	print(generate_ascii_art(pixels))
 	print(f"This is a {pred} with certainty {certainty:.2f} %")
-
+	display_num(pixels)
 	return
 
-def generate_ascii_art(pixels):
-    ascii_art = []
-    for row in pixels:
-        line = []
-        for pixel in row:
-            line.append(pixel_to_char(pixel))
-        ascii_art.append("".join(line))
-    return "\n".join(ascii_art)
-
-
-def pixel_to_char(pixel):
-    if pixel > 0.99:
-        return "O"
-    elif pixel > 0.9:
-        return "o"
-    elif pixel > 0:
-        return "."
-    else:
-        return " "

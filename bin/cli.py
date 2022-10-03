@@ -7,6 +7,7 @@ from ser.info import get_commit
 from ser.train import train
 from ser.infer import inference
 from ser.constants import PROJECT_ROOT, DATA_DIR, Parameters
+from ser.transforms import normalize, flip
 
 import typer
 
@@ -66,14 +67,21 @@ def model_setup(name: str = typer.Option(
 @main.command()
 def infer(name: str = typer.Option(
         ..., "-n", "--name", help="Name of run model saved under."), #eg 'experiment2/2022_09_30-04:57:56_PM'
+        transforms: bool = typer.Option(
+        False, "-f", "--flip", help="list of transforms to be applied during training."), #eg 'experiment2/2022_09_30-04:57:56_PM'
+         
         ):
     
     MODEL_DIR = PROJECT_ROOT / 'runs' / name / 'model'
     print('Model dir: ', MODEL_DIR)
+
     #commit = get_commit(PROJECT_ROOT)    
     
     #params_test = Parameters(name, epochs, batch_size, learning_rate, commit, DATA_DIR)
+    if transforms: 
+        ts = [normalize, flip]
+        print("Flip transform selected.")
 
-    inference(MODEL_DIR)
+    inference(MODEL_DIR, ts)
     
     pass

@@ -16,6 +16,7 @@ from ser.train_utils import save_outputs, _train_batch, _val_batch, vis_update
 
 import typer
 main = typer.Typer()
+#in terminal run: visdom
 #vis = visdom.Visdom()
 
 @dataclass
