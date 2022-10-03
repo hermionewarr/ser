@@ -1,63 +1,56 @@
 #model training code defined here
+from dataclasses import dataclass
+import dataclasses
 import torch
 from torch import optim
 import torch.nn as nn
 import torch.nn.functional as F
+import json
+from pathlib import Path
+import pandas as pd
+import visdom
 
 from ser.CNN_model import Net
 from ser.data import dataloaders
+from ser.train_utils import save_outputs, _train_batch, _val_batch, vis_update
 
 import typer
 main = typer.Typer()
+vis = visdom.Visdom()
 
-def train(params, DATA_DIR, SAVE_DIR):
-    print(f"Running experiment {name}")
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+@dataclass
+class model_parameters():
+    model: object
+    optimizer: str
+    device: torch.device
+    dataloaders: dict
+    hyperparams: dataclass
 
-    # load model
-    model = Net().to(device)
-
-    # setup params
-    optimizer = optim.Adam(model.parameters(), lr=params['learning_rate'])
-
-    training_dataloader, validation_dataloader = dataloaders(params['batch_size'])
+### TRAINING FUNTION ###
+def train(params):
+    print(f"Running experiment {params.name}")
     
-    # train
-    for epoch in range(params['epochs']):
-        for i, (images, labels) in enumerate(training_dataloader):
-            images, labels = images.to(device), labels.to(device)
-            model.train()
-            optimizer.zero_grad()
-            output = model(images)
-            loss = F.nll_loss(output, labels)
-            loss.backward()
-            optimizer.step()
-            print(
-                f"Train Epoch: {epoch} | Batch: {i}/{len(training_dataloader)} "
-                f"| Loss: {loss.item():.4f}"
-            )
-        # validate
-        val_loss = 0
-        correct = 0
-        with torch.no_grad():
-            for images, labels in validation_dataloader:
-                images, labels = images.to(device), labels.to(device)
-                model.eval()
-                output = model(images)
-                val_loss += F.nll_loss(output, labels, reduction="sum").item()
-                pred = output.argmax(dim=1, keepdim=True)
-                correct += pred.eq(labels.view_as(pred)).sum().item()
-            val_loss /= len(validation_dataloader.dataset)
-            val_acc = correct / len(validation_dataloader.dataset)
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model = Net().to(device)
+    optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
+    training_dataloader, validation_dataloader = dataloaders(params.DATA_DIR, params.batch_size)
+    
+    model_params = model_parameters(model, optimizer, device, {'training_dataloader': training_dataloader, 'validation_dataloader': validation_dataloader}, params)
+    
+    ### TRAINING LOOP ###
+    train_losses = []
+    val_accuracy = []
+    val_losses = []
+    loss_plot = vis.line(X = torch.zeros((1)).cpu(), Y = torch.zeros((1)).cpu(), opts=dict(showlegend=True, title='train loss', xlabel = 'batch*epoch', ylabel = 'loss', legend=['train loss']))
+    
+    for epoch in range(1,(params.epochs +1)):
+        _train_batch(model_params, epoch, train_losses, vis, loss_plot)
+        _val_batch(model_params, epoch, val_accuracy, val_losses)
+    
+    train_losses = pd.DataFrame({'train_loss' : train_losses})
+    val_accuracy = pd.DataFrame({'val_acc':val_accuracy, 'val_loss': val_losses})
+    acc_dict = {'train_losses': train_losses, 'val_accuracy' : val_accuracy}
 
-            print(
-                f"Val Epoch: {epoch} | Avg Loss: {val_loss:.4f} | Accuracy: {val_acc}"
-            )
-
-    #save shit
-    # save the parameters!
-    with open(f'{SAVE_DIR}/parameter.txt', 'w') as file:
-        for param, info in params:
-         file.write(f'{param}: {info}')
-        file.write(f'Validation accuracy: {val_acc}')
-        file.close()
+    save_outputs(params, model, acc_dict)
+   
+    return 
