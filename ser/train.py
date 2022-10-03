@@ -16,7 +16,7 @@ from ser.train_utils import save_outputs, _train_batch, _val_batch, vis_update
 
 import typer
 main = typer.Typer()
-vis = visdom.Visdom()
+#vis = visdom.Visdom()
 
 @dataclass
 class model_parameters():
@@ -33,7 +33,7 @@ def train(params):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Net().to(device)
     optimizer = optim.Adam(model.parameters(), lr=params.learning_rate)
-    training_dataloader, validation_dataloader = dataloaders(params.DATA_DIR, params.batch_size)
+    training_dataloader, validation_dataloader,_ = dataloaders(params.DATA_DIR, params.batch_size)
     
     model_params = model_parameters(model, optimizer, device, {'training_dataloader': training_dataloader, 'validation_dataloader': validation_dataloader}, params)
     

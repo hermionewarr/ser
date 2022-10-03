@@ -5,6 +5,8 @@ from dataclasses import dataclass
 
 from ser.info import get_commit
 from ser.train import train
+from ser.infer import inference
+from ser.constants import PROJECT_ROOT, DATA_DIR, Parameters
 
 import typer
 
@@ -12,7 +14,7 @@ main = typer.Typer()
 
 date = datetime.now().strftime("%Y_%m_%d-%I:%M:%S_%p")
 
-PROJECT_ROOT = Path(__file__).parent.parent
+'''PROJECT_ROOT = Path(__file__).parent.parent
 print('Root dir: ', PROJECT_ROOT)
 DATA_DIR = PROJECT_ROOT / "data"
 
@@ -26,7 +28,7 @@ class Parameters():
      DATA_DIR: str
      SAVE_DIR: str
      RESULTS_DIR: str
-
+'''
 
 ### TRAINING ENTRYPOINT ###
 @main.command() #to run: ser model-setup --name ect
@@ -62,8 +64,16 @@ def model_setup(name: str = typer.Option(
 
 ### INFERENCE ENTRYPOINT ###
 @main.command()
-def inference():
-    infer()
-    pass
+def infer(name: str = typer.Option(
+        ..., "-n", "--name", help="Name of run model saved under."), #eg 'experiment2/2022_09_30-04:57:56_PM'
+        ):
     
-# %%
+    MODEL_DIR = PROJECT_ROOT / 'runs' / name / 'model'
+    print('Model dir: ', MODEL_DIR)
+    #commit = get_commit(PROJECT_ROOT)    
+    
+    #params_test = Parameters(name, epochs, batch_size, learning_rate, commit, DATA_DIR)
+
+    inference(MODEL_DIR)
+    
+    pass

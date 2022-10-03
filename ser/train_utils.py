@@ -58,6 +58,7 @@ def vis_update(batch, epoch, loss, vis, loss_plot):
 def save_outputs(params, model, acc_dict):
     ### SAVING THE RESULTS ###
     torch.save(model.state_dict(), params.SAVE_DIR / 'model_dict')
+    torch.save(model, params.SAVE_DIR / 'model.pt')
     
     with open(params.SAVE_DIR / 'parameters.json', 'w') as file:
         param_dict = {str(key):str(value) for key, value in dataclasses.asdict(params).items()}
