@@ -23,12 +23,12 @@ def dataloaders(DATA_DIR, batch_size, ts):
     
     return training_dataloader, validation_dataloader
     
-def test_dataloader(DATA_DIR, batch_size, ts):
+def test_dataloader(DATA_DIR, batch_size, ts, shuffle = False):
     #same as val for now
     test_dataloader = DataLoader(
         datasets.MNIST(root=DATA_DIR, download=True, train=False, transform=transform('test',*ts)),
         batch_size=batch_size,
-        shuffle=False,
+        shuffle=shuffle,
         num_workers=0,
     )
     return test_dataloader

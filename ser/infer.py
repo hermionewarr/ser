@@ -5,7 +5,7 @@ import json
 
 from ser.data import dataloaders, test_dataloader
 from ser.CNN_model import Net
-from ser.constants import DATA_DIR
+from ser.constants import Parameters, load_params
 from ser.display import generate_ascii_art, display_num
 
 def inference(MODEL_DIR, transforms):
@@ -15,16 +15,13 @@ def inference(MODEL_DIR, transforms):
 
     #load the parameters from the run_path so we can print them out!
 	model_path = MODEL_DIR / 'model_dict'#.pt' 
-	model_params = MODEL_DIR / 'parameters.json'
+
 	print('\nModel Summary:\n')
-	with open(model_params, "r") as f:
-		data = json.load(f)
-		for key, i in data.items():
-			print(key ,': ', i)
+	params = load_params(MODEL_DIR)
 
  	# select image to run inference for
 	print('\nLoading data...')
-	dataloader = test_dataloader(DATA_DIR, 1, transforms)
+	dataloader = test_dataloader(params.DATA_DIR, 1, transforms)
 	images, labels = next(iter(dataloader))
 	while labels[0].item() != label:
 		images, labels = next(iter(dataloader))

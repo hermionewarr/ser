@@ -2,9 +2,27 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import dataclasses
-import json
+import copy 
 import pandas as pd
 import visdom
+
+from ser.constants import save_params
+
+def train_loop(model_params, params, vis):
+    train_losses = []
+    val_accuracy = []
+    val_losses = []
+    val_best = 0
+    loss_plot = vis.line(X = torch.zeros((1)).cpu(), Y = torch.zeros((1)).cpu(), opts=dict(showlegend=True, title='train loss', xlabel = 'batch*epoch', ylabel = 'loss', legend=['train loss']))
+    
+    for epoch in range(1,(params.epochs +1)):
+        _train_batch(model_params, epoch, train_losses, vis, loss_plot)
+        val_best, best_model_dict = _val_batch(model_params, epoch, val_accuracy, val_losses, val_best)
+    
+    train_losses = pd.DataFrame({'train_loss' : train_losses})
+    val_accuracy = pd.DataFrame({'val_acc':val_accuracy, 'val_loss': val_losses})
+    acc_dict = {'train_losses': train_losses, 'val_accuracy' : val_accuracy}
+    return acc_dict, best_model_dict, val_best
 
 def _train_batch(model_params, epoch, train_losses, vis, loss_plot):
     for batch, (images, labels) in enumerate(model_params.dataloaders['training_dataloader']):
@@ -12,6 +30,7 @@ def _train_batch(model_params, epoch, train_losses, vis, loss_plot):
         model_params.model.train()
         model_params.optimizer.zero_grad()
         output = model_params.model(images)
+        #pred = output.argmax(dim=1, keepdim=True)
         loss = F.nll_loss(output, labels)
         loss.backward()
         model_params.optimizer.step()
@@ -24,10 +43,9 @@ def _train_batch(model_params, epoch, train_losses, vis, loss_plot):
     return
 
 @torch.no_grad()
-def _val_batch(model_params, epoch, val_accuracy, val_losses):
+def _val_batch(model_params, epoch, val_accuracy, val_losses, val_best):
     val_loss = 0
     correct = 0
-    val_best = 0
     for images, labels in model_params.dataloaders['validation_dataloader']:
         images, labels = images.to(model_params.device), labels.to(model_params.device)
         model_params.model.eval()
@@ -40,7 +58,7 @@ def _val_batch(model_params, epoch, val_accuracy, val_losses):
     if val_acc > val_best:
         val_best = val_acc
         best_epoch = epoch
-        best_model_state = torch.deepcopy(model_params.model.state_dict())
+        best_model_state = copy.deepcopy(model_params.model.state_dict())#save this at end. 
     print(
         f"Val Epoch: {epoch} | Avg Loss: {val_loss:.4f} | Accuracy: {val_acc}"
     )
@@ -49,22 +67,18 @@ def _val_batch(model_params, epoch, val_accuracy, val_losses):
     print(
         f"|* Best Epoch: {best_epoch} | Best Accuracy: {val_best} *|"
         )  
-    return
+    return val_best, best_model_state
 
 #plotting loss as you go
 def vis_update(batch, epoch, loss, vis, loss_plot):
     vis.line(X=torch.ones((1,1)).cpu()*batch*epoch, Y =torch.ones((1,1)).cpu()*loss.item(), win = loss_plot, update='append')
     return
 
-def save_outputs(params, model, acc_dict):
+def save_outputs(params, model_dict, acc_dict):
     ### SAVING THE RESULTS ###
-    torch.save(model.state_dict(), params.SAVE_DIR / 'model_dict.pt')
-    torch.save(model, params.SAVE_DIR / 'model.pt')
-    
-    with open(params.SAVE_DIR / 'parameters.json', 'w') as file:
-        param_dict = {str(key):str(value) for key, value in dataclasses.asdict(params).items()}
-        json.dump(param_dict, file, indent=4, sort_keys=True, separators=(',', ': '), ensure_ascii=False)
-        file.close()
+    torch.save(model_dict, params.SAVE_DIR / 'model_dict.pt')
+
+    save_params(params, params.SAVE_DIR)
 
     acc_dict['train_losses'].to_csv(params.RESULTS_DIR / 'train_loss.csv', index=False)
     acc_dict['val_accuracy'].to_csv(params.RESULTS_DIR / 'val_accuracy_loss.csv')
