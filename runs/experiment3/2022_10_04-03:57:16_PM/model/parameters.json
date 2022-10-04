@@ -1,0 +1,8 @@
+{
+    "batch_size": 1000,
+    "commit": "a3a2a16179b6416e140b809703b117a3504c5ba3",
+    "date": "2022_10_04-03:57:16_PM",
+    "epochs": 1,
+    "learning_rate": 0.01,
+    "name": "experiment3"
+}

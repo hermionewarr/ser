@@ -1,7 +1,7 @@
 from crypt import methods
 from datetime import datetime
 from pathlib import Path
-import dataclasses
+import torch
 from dataclasses import asdict, dataclass
 import json 
 
@@ -16,7 +16,7 @@ class model_parameters():
     device: torch.device
     dataloaders: dict
     hyperparams: dataclass
-    
+
 @dataclass
 class Parameters():
      name: str 

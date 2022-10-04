@@ -5,18 +5,21 @@ import dataclasses
 import copy 
 import pandas as pd
 import visdom
-
+from ser.display import VisdomLinePlotter
 from ser.constants import save_params
 
-def train_loop(model_params, params, vis):
+global vis
+vis = VisdomLinePlotter(env_name='SER Plots')
+
+def train_loop(model_params, params):
     train_losses = []
     val_accuracy = []
     val_losses = []
     val_best = 0
-    loss_plot = vis.line(X = torch.zeros((1)).cpu(), Y = torch.zeros((1)).cpu(), opts=dict(showlegend=True, title='train loss', xlabel = 'batch*epoch', ylabel = 'loss', legend=['train loss']))
+    #loss_plot = vis.line(X = torch.zeros((1)).cpu(), Y = torch.zeros((1)).cpu(), opts=dict(showlegend=True, title='train loss', xlabel = 'batch*epoch', ylabel = 'loss', legend=['train loss']))
     
     for epoch in range(1,(params.epochs +1)):
-        _train_batch(model_params, epoch, train_losses, vis, loss_plot)
+        _train_batch(model_params, epoch, train_losses)
         val_best, best_model_dict = _val_batch(model_params, epoch, val_accuracy, val_losses, val_best)
     
     train_losses = pd.DataFrame({'train_loss' : train_losses})
@@ -24,7 +27,7 @@ def train_loop(model_params, params, vis):
     acc_dict = {'train_losses': train_losses, 'val_accuracy' : val_accuracy}
     return acc_dict, best_model_dict, val_best
 
-def _train_batch(model_params, epoch, train_losses, vis, loss_plot):
+def _train_batch(model_params, epoch, train_losses):
     for batch, (images, labels) in enumerate(model_params.dataloaders['training_dataloader']):
         images, labels = images.to(model_params.device), labels.to(model_params.device)
         model_params.model.train()
@@ -39,13 +42,17 @@ def _train_batch(model_params, epoch, train_losses, vis, loss_plot):
             f"| Loss: {loss.item():.4f}"
         )
         train_losses.append(loss.item()) #maybe add batch and epoch info here
-        vis_update(batch, epoch, loss, vis, loss_plot) 
+        #vis_update(batch, epoch, loss, vis, loss_plot) 
+        vis.plot('loss', 'train', 'Train Loss', epoch*batch, loss.item())
+
     return
 
 @torch.no_grad()
 def _val_batch(model_params, epoch, val_accuracy, val_losses, val_best):
     val_loss = 0
     correct = 0
+    best_epoch = 0
+    best_model_state = model_params.model.state_dict()
     for images, labels in model_params.dataloaders['validation_dataloader']:
         images, labels = images.to(model_params.device), labels.to(model_params.device)
         model_params.model.eval()
@@ -70,7 +77,7 @@ def _val_batch(model_params, epoch, val_accuracy, val_losses, val_best):
     return val_best, best_model_state
 
 #plotting loss as you go
-def vis_update(batch, epoch, loss, vis, loss_plot):
+def vis_update(batch, epoch, loss):
     vis.line(X=torch.ones((1,1)).cpu()*batch*epoch, Y =torch.ones((1,1)).cpu()*loss.item(), win = loss_plot, update='append')
     return
 
